@@ -23,5 +23,7 @@ The updated `MonteCarlo_online.m` script exploits the parfor loop and the closed
 The function `Alg2v1.m` that solves the optimization problem using the cvx package is not used in the current version of the algorithm. If a user wants to change the optimization function and use cvx, he can update the objective function in `Alg2v1.m` and update the functions `W_opt_generator.m` and `getWfromTargetIndexes_online` accordingly.
 
 [1] A. M. Ahmed, A. A. Ahmad, S. Fortunati, A. Sezgin, M. S. Greco and F. Gini, "A Reinforcement Learning Based Approach for Multitarget Detection in Massive MIMO Radar," in *IEEE Transactions on Aerospace and Electronic Systems*, vol. 57, no. 5, pp. 2622-2636, Oct. 2021.
+
 [2] F. Lisi, S. Fortunati, M. S. Greco and F. Gini, "Enhancement of a State-of-the-Art RL-Based Detection Algorithm for Massive MIMO Radars," in *IEEE Transactions on Aerospace and Electronic Systems*, vol. 58, no. 6, pp. 5925-5931, Dec. 2022.
+
 [3] P. Stoica, J. Li and Y. Xie, "On Probing Signal Design For MIMO Radar," in *IEEE Transactions on Signal Processing*, vol. 55, no. 8, pp. 4151-4161, Aug. 2007.
