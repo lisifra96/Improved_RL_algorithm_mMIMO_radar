@@ -17,12 +17,12 @@
 % for all different possible steering vectors with Nt=Nr fixed and number of
 % angular bins fixed
 
-nuBinsNumber=20;                                    % Number of ν bins 
+nuBinsNumber=10;                                    % Number of ν bins 
 nu_array=-0.5+(0:nuBinsNumber-1)'/nuBinsNumber;     % Array defining the grid of ν=d/λ*sin(θ) values
 Nt_array=[1e2];                                     % Array containing the number of transmit antennas
 loopNt=length(Nt_array);
 Ptot=1;                                             % Total transmit power
-MaxDetectableTarget=5;                              % Max number of target that can be detected
+MaxDetectableTarget=3;                              % Max number of target that can be detected
 CombosCell=cell(MaxDetectableTarget+1,1);           % cell containing all possible combinations of n elements over a set with nuBinsNumber elements
 CombosCell{1}=0;                                    % The Combos Cell in the case of no target present is seto to 0 by default
 PathName=what('Wcubes');
@@ -50,7 +50,8 @@ for n=1:MaxDetectableTarget
     ThisBinomialCoeffSum=BinomialCoeffSum(n);
     parfor m=1:Ncombos
         A=aT_Mat(:,combos(m,:));                        % Matrix conaining all the steering vectors associated to the given combination
-        [~, W]=Alg2v1(Nt,A,Ptot);                       % optimal W computation
+%         [~, W]=Alg2v1(Nt,A,Ptot);      % optimal W computation (CVX)
+        W=Closed_Form_W(A,Ptot);                    % optimal W computation (Closed-form)
         W_CUBE(:,:,ThisBinomialCoeffSum+m)=W;
     end
     BinomialCoeffSum(n+1)=BinomialCoeffSum(n)+Ncombos;
@@ -86,8 +87,9 @@ if loopNt>1
             Ncombos=nchoosek(nuBinsNumber,n);                     % Binomial(nuBinsNumber,n) 
             ThisBinomialCoeffSum=BinomialCoeffSum(n);
             parfor m=1:Ncombos
-                A=aT_Mat(:,combos(m,:));                        % Matrix conaining all the steering vectors associated to the given combination
-                [~, W]=Alg2v1(Nt,A,Ptot);                       % optimal W computation
+                A=aT_Mat(:,combos(m,:));                    % Matrix conaining all the steering vectors associated to the given combination
+%                 [~, W]=Alg2v1(Nt,A,Ptot);      % optimal W computation (CVX)
+                W=Closed_Form_W(A,Ptot);                    % optimal W computation (Closed-form)
                 W_CUBE(:,:,ThisBinomialCoeffSum+m)=W;
             end
         end

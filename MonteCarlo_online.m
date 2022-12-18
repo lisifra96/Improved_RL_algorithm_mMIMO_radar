@@ -13,34 +13,19 @@
 %    limitations under the License.
 
 %% Orthogonal algorithm: variable definition
-% Definition of some variables
-WaldTest_Stat_Ort=zeros(nuBinsNumber,1);                % array containing the Wald test statistic
-
 % Monte Carlo averaged results variable initialization
 DetectionFrequency_Ort=zeros(nuBinsNumber,Tmax);        % Detection frequency averaged over MC trials
 
 %% Optimal algorithm: variable definition
-% Definition of some variables
-WaldTest_Stat_Opt=zeros(nuBinsNumber,1);                % array containing the Wald test statistic
-
 % Monte Carlo averaged results variable initialization
 DetectionFrequency_Opt=zeros(nuBinsNumber,Tmax);        % Detection frequency averaged over MC trials
 
 %% Adaptive algorithm: variable definition
-% Definition of some variables
-WaldTest_Stat_Adaptive=zeros(nuBinsNumber,1);           % array containing the Wald test statistic
-DetectionArray_Adaptive=zeros(nuBinsNumber,1);          % double(WaldTest_Stat>Thresh)
-
 % Monte Carlo averaged results variable initialization
 BPaverage_Adaptive=zeros(nuBinsNumber,Tmax);            % Beam pattern averaged over MC trials
 DetectionFrequency_Adaptive=zeros(nuBinsNumber,Tmax);   % Detection frequency averaged over MC trials
 
 %% SARSA algorithm: variable definition
-% Definition of some variables
-WaldTest_Stat_SARSA=zeros(nuBinsNumber,1);              % array containing the Wald test statistic
-DetectionArray_SARSA=zeros(nuBinsNumber,1);             % double(WaldTest_Stat>Thresh)
-state_array=zeros(1,Tmax);                              % array containing each state in a single MC run
-action_array=zeros(1,Tmax);                             % array containing each action in a single MC run
 
 % Monte Carlo averaged results variable initialization
 WaldTest_StatMat_SARSA=zeros(nuBinsNumber,Tmax);        % Matrix containing all the WaldTest statistics averaged over MC trials
@@ -67,27 +52,70 @@ for u=1:NumberVaryingScenarios                              % loop over varying 
     BP_Opt(:,ScenarioStartInstant(u):ScenarioStopInstant(u))=dot(X,X).'*ones(1,ScenarioStopInstant(u)-ScenarioStartInstant(u)+1);
 end
 
+if ~VaryingAlphaFlag
+    alphaInit=SARSAparam.alpha;
+end
+if ~VaryingEpsilonFlag
+    epsilonInit=SARSAparam.epsilon;
+end
+gamma=SARSAparam.gamma;
+MaxTargetNumber=GetStateRewardInputStruct.MaxTargetNumber;
+Thresh=GetStateRewardInputStruct.Thresh;
+
 %% Monte Carlo loop
-for m=1:MC_iter
+parfor m=1:MC_iter
     
+    %% Orthogonal algorithm: variable initialization
+    Test_output_Ort=zeros(nuBinsNumber,Tmax);   % Matrix containing the result of the Wald Test for the single Monte Carlo run
+    WaldTest_Stat_Ort=zeros(nuBinsNumber,1);    % array containing the Wald test statistic
+
+    %% Optimal algorithm: variable initialization
+    Test_output_Opt=zeros(nuBinsNumber,Tmax);   % Matrix containing the result of the Wald Test for the single Monte Carlo run
+    WaldTest_Stat_Opt=zeros(nuBinsNumber,1);    % array containing the Wald test statistic
+
     %% Adaptive algorithm: variable initialization
-    W_Adaptive=W_ort;                           % The initial value of W is set to W_ort
+    W_Adaptive=W_ort;                               % The initial value of W is set to W_ort
+    Test_output_Adaptive=zeros(nuBinsNumber,Tmax);  % Matrix containing the result of the Wald Test for the single Monte Carlo run
+    BP_Adaptive=zeros(nuBinsNumber,Tmax);           % Matrix containing the Beampattern at each time instant for the single Monte Carlo run
+    WaldTest_Stat_Adaptive=zeros(nuBinsNumber,1);    % array containing the Wald test statistic
 
     %% SARSA algorithm: variable initialization
     Q_SARSA=Q_SARSAinit;                        % Q matrix initialization
     state_prev_SARSA=1;                         % state initialization
     action_prev_SARSA=1;                        % action initialization
     W_SARSA=W_ort;                              % The initial value of W is set to W_ort
-    if VaryingEpsilonFlag
-        SARSAparam.epsilon=EpsilonInitial;      % ε initialization (adaptive ε algorithm)
-    end
-    if VaryingAlphaFlag
-        SARSAparam.alpha=AlphaInitial;          % α initialization (adaptive α algorithm)
-    end
     ExplorationFlagArray=ones(3,1);             % This array contains the last three samples of the ExplorationFlag
     PrevReward=0;                               % reward value at the previous iteration                                                            
     AbsDiffReward=0;                            % absolute value of the difference between the current reward and the previous reward                                                             
-    
+    WaldTest_Stat_SARSA=zeros(nuBinsNumber,1);              % array containing the Wald test statistic
+    DetectionArray_SARSA=zeros(nuBinsNumber,1);             % double(WaldTest_Stat>Thresh)
+    state_array=zeros(1,Tmax);                              % array containing each state in a single MC run
+    action_array=zeros(1,Tmax);                             % array containing each action in a single MC run
+    Test_output_SARSA=zeros(nuBinsNumber,Tmax); % Matrix containing the result of the Wald Test for the single Monte Carlo run
+    BP_SARSA=zeros(nuBinsNumber,Tmax);          % Matrix containing the Beampattern at each time instant for the single Monte Carlo run
+    reward_SARSA=zeros(1,Tmax);
+    Qcube_SARSA=zeros(MaxDetectableTargets+1,MaxDetectableTargets+1,Tmax);
+    epsilonValuesArray=zeros(1,Tmax);
+    alphaValuesArray=zeros(1,Tmax);
+    StateMat=zeros(MaxDetectableTargets+1,Tmax);
+    ActionMat=zeros(MaxDetectableTargets+1,Tmax);
+    SARSAparam=struct();
+    SARSAparam.gamma=gamma;
+    if VaryingEpsilonFlag
+        SARSAparam.epsilon=EpsilonInitial;      % ε initialization (adaptive ε algorithm)
+    else
+        SARSAparam.epsilon=epsilonInit;
+    end
+    if VaryingAlphaFlag
+        SARSAparam.alpha=AlphaInitial;          % α initialization (adaptive α algorithm)
+    else
+        SARSAparam.alpha=alphaInit;
+    end
+    SARSAinStruct=struct();
+    SARSAoutStruct=struct();
+    GetStateRewardInputStruct=struct();
+    GetStateRewardInputStruct.Thresh=Thresh;
+    GetStateRewardInputStruct.MaxTargetNumber=MaxTargetNumber;
     %% Loop over time and angular bins
     
     for u=1:NumberVaryingScenarios                              % loop over varying scenarios         
@@ -133,25 +161,26 @@ for m=1:MC_iter
             end
 
             %% Orthogonal algorithm: MC loop variables update
-            DetectionFrequency_Ort(:,t)=DetectionFrequency_Ort(:,t)+double(WaldTest_Stat_Ort>Thresh);    
+            
+            Test_output_Ort(:,t)=double(WaldTest_Stat_Ort>Thresh);
 
             %% Optimal algorithm: MC loop variables update
-            DetectionFrequency_Opt(:,t)=DetectionFrequency_Opt(:,t)+double(WaldTest_Stat_Opt>Thresh);    
+            Test_output_Opt(:,t)=double(WaldTest_Stat_Opt>Thresh);
 
             %% Adaptive algorithm: detection and W selection
             DetectionArray_Adaptive=WaldTest_Stat_Adaptive>Thresh;
-
+            
             % The following instruction select the optimal W
             % matrix given the current action
             [~,TargetIndexes]=maxk(WaldTest_Stat_Adaptive,min(sum(DetectionArray_Adaptive),MaxDetectableTargets));
             [W_Adaptive] = getWfromTargetIndexes_online(Nt,aT_Mat(:,TargetIndexes),Ptot,W_ort);
 
             %% Adaptive algorithm: MC loop variables update
-            DetectionFrequency_Adaptive(:,t)=DetectionFrequency_Adaptive(:,t)+DetectionArray_Adaptive;
+            Test_output_Adaptive(:,t)=DetectionArray_Adaptive;
     
             % Beampattern update
             X=W_Adaptive'*conj(aT_Mat);
-            BPaverage_Adaptive(:,t)=BPaverage_Adaptive(:,t)+dot(X,X).';
+            BP_Adaptive(:,t)=dot(X,X).';
 
             %% SARSA algorithm: detection and W selection
             DetectionArray_SARSA=WaldTest_Stat_SARSA>Thresh;
@@ -187,7 +216,7 @@ for m=1:MC_iter
             % Adaptive epsilon algorithm
             if VaryingEpsilonFlag
 
-                epsilonValuesArrayAvg(t)=epsilonValuesArrayAvg(t)+SARSAparam.epsilon;
+                epsilonValuesArray(t)=SARSAparam.epsilon;
 
                 if AdaptiveAlgorithmUpdateBit
                     if AbsDiffReward<VaryingEpsilonThresh1
@@ -205,7 +234,7 @@ for m=1:MC_iter
             % Adaptive alpha algorithm
             if VaryingAlphaFlag
 
-                alphaValuesArrayAvg(t)=alphaValuesArrayAvg(t)+SARSAparam.alpha;
+                alphaValuesArray(t)=SARSAparam.alpha;
 
                 if AdaptiveAlgorithmUpdateBit
                     if AbsDiffReward<VaryingAlphaThresh1
@@ -231,17 +260,16 @@ for m=1:MC_iter
 
             %% SARSA algorithm: MC loop variables update
 
-            rewardAvg_SARSA(t)=rewardAvg_SARSA(t)+SARSAoutStruct.reward;
-            DetectionFrequency_SARSA(:,t)=DetectionFrequency_SARSA(:,t)+DetectionArray_SARSA;
-            QcubeAvg_SARSA(:,:,t)=QcubeAvg_SARSA(:,:,t)+Q_SARSA;
+            reward_SARSA(t)=SARSAoutStruct.reward;
+            Test_output_SARSA(:,t)=DetectionArray_SARSA;
+            Qcube_SARSA(:,:,t)=Q_SARSA;
 
             state_array(t)=SARSAoutStruct.state;
             action_array(t)=SARSAoutStruct.action;
-            WaldTest_StatMat_SARSA(:,t)=WaldTest_Stat_SARSA;
 
             % Compute Beampattern
             X=W_SARSA'*conj(aT_Mat);
-            BPaverage_SARSA(:,t)=BPaverage_SARSA(:,t)+dot(X,X).';
+            BP_SARSA(:,t)=dot(X,X).';
                         
         end
     end
@@ -249,11 +277,30 @@ for m=1:MC_iter
     %% SARSA algorithm: computation of StateFreq and ActionFreq matrices
     for x=1:MaxDetectableTargets+1
        
-        StateFreq(x,:)=StateFreq(x,:)+double(state_array==x);
-        ActionFreq(x,:)=ActionFreq(x,:)+double(action_array==x);
-        
+        StateMat=double(state_array==x);
+        ActionMat=double(action_array==x);
     end
-    
+
+    %% Orthogonal algorithm: monte carlo update
+    DetectionFrequency_Ort=DetectionFrequency_Ort+Test_output_Ort;
+
+    %% Optimal algorithm: monte carlo update
+    DetectionFrequency_Opt=DetectionFrequency_Opt+Test_output_Opt;
+
+    %% Adaptive algorithm: monte carlo update
+    DetectionFrequency_Adaptive=DetectionFrequency_Adaptive+Test_output_Adaptive;
+    BPaverage_Adaptive=BPaverage_Adaptive+BP_Adaptive;
+
+    %% SARSA algorithm: monte carlo update
+    DetectionFrequency_SARSA=DetectionFrequency_SARSA+Test_output_SARSA;
+    BPaverage_SARSA=BPaverage_SARSA+BP_SARSA;
+    rewardAvg_SARSA=rewardAvg_SARSA+reward_SARSA;
+    QcubeAvg_SARSA=QcubeAvg_SARSA+Qcube_SARSA;
+    epsilonValuesArrayAvg=epsilonValuesArrayAvg+epsilonValuesArray;
+    alphaValuesArrayAvg=alphaValuesArrayAvg+alphaValuesArray;
+    StateFreq=StateFreq+StateMat;
+    ActionFreq=ActionFreq+ActionMat;
+
 end
 %% Orthogonal algorithm: MC loop variables computation
 DetectionFrequency_Ort=DetectionFrequency_Ort/MC_iter;

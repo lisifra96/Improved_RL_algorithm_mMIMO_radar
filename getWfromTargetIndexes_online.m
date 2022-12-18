@@ -28,7 +28,8 @@ function [W] = getWfromTargetIndexes_online(Nt,A,Ptot,W_ort)
 if isempty(A)
     W=W_ort;
 else
-    [~,W]=Alg2v1(Nt,A,Ptot);
+    %[~,W]=Alg2v1(Nt,A,Ptot);
+    W=Closed_Form_W(A,Ptot);
 end
 
 end

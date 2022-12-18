@@ -122,7 +122,7 @@ Ntrans=100*ceil(3*log(10)/abs( log( max(abs(p)) ) ) );  % number of samples that
 % TargetSNRdB:              Target SNR
 % ScenarioChangeInstant:    time instants when the scenario changes
 
-TargetScenario=2;             
+TargetScenario=3;             
 
 switch TargetScenario
     case 1
@@ -167,7 +167,7 @@ ScenarioStopInstant=[ScenarioChangeInstant-1, Tmax];
 %% Monte Carlo simulation 
 
 % Parameters
-MC_iter = 1*1e0;                                    % number of Monte Carlo runs
+MC_iter = 4*1e1;                                    % number of Monte Carlo runs
 LoopOver='LoopOverNt';                   % Select which variable to loop on
 LoopVar=LoopOver(9:end);                            % string added to the saved results' name
 
